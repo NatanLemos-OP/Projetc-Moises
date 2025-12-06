@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minhas Fotos – Galeria (Todas + Filtros)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS ORIGINAL (mantido exatamente) -->
+  <style>
+    :root{--bg:#f8fafc;--card:#ffffff;--accent:#6366f1;--sel:#e0e7ff;--text:#1e293b;--muted:#64748b}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);padding-bottom:120px}
+    header{text-align:center;padding:80px 20px 60px;background:linear-gradient(135deg,#e0e7ff,#c7d2fe)}
+    h1{font-size:2.8rem;color:#4338ca;margin-bottom:10px}
+    .subtitle{font-size:1.1rem;color:#4c1d95;font-weight:500}
+
+    .gallery{
+      column-count:5;column-gap:24px;max-width:1800px;margin:24px auto 120px;padding:0 24px;
+    }
+    .photo{
+      display:inline-block;width:100%;margin-bottom:28px;background:var(--card);border-radius:20px;
+      overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);border:3px solid transparent;
+      transition:all .3s;cursor:pointer;position:relative;break-inside:avoid;
+    }
+    .photo.selected{border-color:var(--accent);box-shadow:0 0 0 5px var(--sel)}
+    .photo::after{
+      content:"Checkmark";position:absolute;top:14px;right:14px;width:40px;height:40px;
+      background:var(--accent);color:white;border-radius:50%;font-size:26px;line-height:40px;
+      text-align:center;opacity:0;transition:.3s;
+    }
+    .photo.selected::after{opacity:1}
+    .photo img{width:100%;height:auto;display:block;border-radius:20px 20px 0 0;object-fit:cover}
+    .caption{padding:20px;text-align:center}
+    .caption h3{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+    .caption p{font-size:0.95rem;color:var(--muted)}
+
+    .fab{
+      position:fixed;bottom:30px;right:30px;background:var(--accent);color:white;
+      width:70px;height:70px;border-radius:50%;border:none;font-size:32px;
+      box-shadow:0 12px 40px rgba(99,102,241,0.5);cursor:pointer;z-index:1000;
+      display:flex;align-items:center;justify-content:center;flex-direction:column;
+    }
+    .fab:hover{transform:scale(1.12)}
+    .fab .count{
+      position:absolute;top:-10px;right:-10px;background:#ef4444;color:white;
+      font-size:14px;font-weight:bold;width:32px;height:32px;border-radius:50%;
+      line-height:32px;
+    }
+
+    .controls {
+      max-width:1800px;margin:0 auto;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;
+    }
+    .controls input[type="search"]{padding:8px 12px;border-radius:8px;border:1px solid #e6e9ef;width:280px}
+    .controls button{padding:8px 12px;border-radius:8px;border:1px solid #e6e9ef;background:white;cursor:pointer}
+    .controls .small{padding:6px 10px;font-size:13px}
+
+    @media(max-width:1600px){.gallery{column-count:4}}
+    @media(max-width:1200px){.gallery{column-count:3}}
+    @media(max-width:900px){.gallery{column-count:2}}
+    @media(max-width:600px){.gallery{column-count:1;padding:0 16px}}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Minhas Fotos</h1>
+  <p class="subtitle">Clique nas fotos para selecionar → Gere o relatório em PDF (apenas nomes)</p>
+</header>
+
+<div class="controls">
+  <input id="search" type="search" placeholder="Buscar por nome (ex.: DSC004)..." />
+  <button id="btnShowAll" class="small">Mostrar todos</button>
+  <button id="btnShowSelected" class="small">Mostrar apenas selecionados</button>
+  <button id="selectAll" class="small">Selecionar tudo (visíveis)</button>
+  <button id="clearSelection" class="small">Limpar seleção</button>
+  <div style="min-width:80px;text-align:center;color:#334155">Selecionadas: <strong id="count">0</strong></div>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<button class="fab" id="fab" type="button" aria-label="Download PDF">
+  <div style="font-size:14px;line-height:1;margin-bottom:4px">Download</div>
+  <span class="count" id="count-fab">0</span>
+</button>
+
+<!-- jsPDF CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+/* Versão: exibir todas as imagens e controles de filtro + seleção.
+   photoListStatic foi preenchido com a lista que você enviou.
+*/
+
+(function(){
+  // ------------------------
+  // Lista de imagens (sua lista)
+  // ------------------------
+  const photoListStatic = [
+"1 (100).jpg", "1 (101).jpg", "1 (104).jpg", "1 (106).jpg", "1 (107).jpg", "1 (108).jpg", "1 (110).jpg", "1 (111).jpg", "1 (114).jpg", "1 (115).jpg", "1 (117).jpg", "1 (118).jpg", "1 (121).jpg", "1 (122).jpg", "1 (124).jpg", "1 (125).jpg", "1 (128).jpg", "1 (131).jpg", "1 (132).jpg", "1 (133).jpg", "1 (134).jpg", "1 (135).jpg", "1 (136).jpg", "1 (138).jpg", "1 (140).jpg", "1 (141).jpg", "1 (142).jpg", "1 (143).jpg", "1 (144).jpg", "1 (146).jpg", "1 (147).jpg", "1 (148).jpg", "1 (151).jpg", "1 (152).jpg", "1 (155).jpg", "1 (156).jpg", "1 (157).jpg", "1 (16).jpg", "1 (160).jpg", "1 (161).jpg", "1 (165).jpg", "1 (166).jpg", "1 (168).jpg", "1 (169).jpg", "1 (17).jpg", "1 (170).jpg", "1 (171).jpg", "1 (172).jpg", "1 (173).jpg", "1 (175).jpg", "1 (176).jpg", "1 (177).jpg", "1 (178).jpg", "1 (18).jpg", "1 (180).jpg", "1 (181).jpg", "1 (182).jpg", "1 (183).jpg", "1 (184).jpg", "1 (185).jpg", "1 (186).jpg", "1 (190).jpg", "1 (191).jpg", "1 (192).jpg", "1 (193).jpg", "1 (194).jpg", "1 (195).jpg", "1 (196).jpg", "1 (197).jpg", "1 (199).jpg", "1 (200).jpg", "1 (201).jpg", "1 (202).jpg", "1 (204).jpg", "1 (208).jpg", "1 (215).jpg", "1 (216).jpg", "1 (217).jpg", "1 (220).jpg", "1 (221).jpg", "1 (222).jpg", "1 (223).jpg", "1 (224).jpg", "1 (225).jpg", "1 (226).jpg", "1 (227).jpg", "1 (228).jpg", "1 (229).jpg", "1 (230).jpg", "1 (231).jpg", "1 (232).jpg", "1 (233).jpg", "1 (234).jpg", "1 (235).jpg", "1 (236).jpg", "1 (237).jpg", "1 (24).jpg", "1 (240).jpg", "1 (242).jpg", "1 (243).jpg", "1 (244).jpg", "1 (245).jpg", "1 (248).jpg", "1 (249).jpg", "1 (250).jpg", "1 (251).jpg", "1 (254).jpg", "1 (257).jpg", "1 (258).jpg", "1 (259).jpg", "1 (260).jpg", "1 (261).jpg", "1 (262).jpg", "1 (263).jpg", "1 (264).jpg", "1 (266).jpg", "1 (267).jpg", "1 (268).jpg", "1 (269).jpg", "1 (27).jpg", "1 (274).jpg", "1 (275).jpg", "1 (277).jpg", "1 (278).jpg", "1 (279).jpg", "1 (280).jpg", "1 (281).jpg", "1 (286).jpg", "1 (287).jpg", "1 (288).jpg", "1 (290).jpg", "1 (291).jpg", "1 (292).jpg", "1 (293).jpg", "1 (297).jpg", "1 (298).jpg", "1 (299).jpg", "1 (30).jpg", "1 (304).jpg", "1 (305).jpg", "1 (306).jpg", "1 (307).jpg", "1 (308).jpg", "1 (309).jpg", "1 (31).jpg", "1 (310).jpg", "1 (311).jpg", "1 (312).jpg", "1 (313).jpg", "1 (314).jpg", "1 (315).jpg", "1 (316).jpg", "1 (317).jpg", "1 (318).jpg", "1 (319).jpg", "1 (320).jpg", "1 (321).jpg", "1 (322).jpg", "1 (323).jpg", "1 (324).jpg", "1 (325).jpg", "1 (326).jpg", "1 (327).jpg", "1 (328).jpg", "1 (329).jpg", "1 (331).jpg", "1 (332).jpg", "1 (333).jpg", "1 (334).jpg", "1 (335).jpg", "1 (336).jpg", "1 (337).jpg", "1 (338).jpg", "1 (339).jpg", "1 (340).jpg", "1 (341).jpg", "1 (342).jpg", "1 (343).jpg", "1 (344).jpg", "1 (345).jpg", "1 (346).jpg", "1 (347).jpg", "1 (348).jpg", "1 (349).jpg", "1 (350).jpg", "1 (351).jpg", "1 (352).jpg", "1 (353).jpg", "1 (354).jpg", "1 (355).jpg", "1 (356).jpg", "1 (358).jpg", "1 (359).jpg", "1 (361).jpg", "1 (362).jpg", "1 (363).jpg", "1 (364).jpg", "1 (365).jpg", "1 (366).jpg", "1 (369).jpg", "1 (370).jpg", "1 (371).jpg", "1 (372).jpg", "1 (373).jpg", "1 (43).jpg", "1 (47).jpg", "1 (67).jpg", "1 (74).jpg", "1 (85).jpg", "1 (86).jpg", "1 (90).jpg", "1 (93).jpg", "1 (94).jpg", "1 (96).jpg", "1 (97).jpg", "1 (98).jpg", "DSC00447.jpg", "DSC00452.jpg", "DSC00458.jpg", "DSC00459.jpg", "DSC00463.jpg", "DSC00464.jpg", "DSC00465.jpg", "DSC00466.jpg", "DSC00467.jpg", "DSC00468.jpg", "DSC00469.jpg", "DSC00471.jpg", "DSC00474.jpg", "DSC00475.jpg", "DSC00480.jpg", "DSC00481.jpg", "DSC00484.jpg", "DSC00489.jpg", "DSC00494.jpg", "DSC00496.jpg", "DSC00497.jpg", "DSC00503.jpg", "DSC00504.jpg", "DSC00511.jpg", "DSC00516.jpg", "DSC00517.jpg", "DSC00525.jpg", "DSC00526.jpg", "DSC00529.jpg", "DSC00530.jpg", "DSC00533.jpg", "DSC00543.jpg", "DSC00554.jpg", "DSC00562.jpg", "DSC00563.jpg", "DSC00564.jpg", "DSC00565.jpg", "DSC00566.jpg", "DSC00572.jpg", "DSC00574.jpg", "DSC00582.jpg", "DSC00584.jpg", "DSC00586.jpg", "DSC00590.jpg", "DSC00594.jpg", "DSC00601.jpg", "DSC00603.jpg", "DSC00606.jpg", "DSC00614.jpg", "DSC00618.jpg", "DSC00619.jpg", "DSC00621.jpg", "DSC00623.jpg", "DSC00626.jpg", "DSC00628.jpg", "DSC00630.jpg", "DSC00633.jpg", "DSC00636.jpg", "DSC00637.jpg", "DSC00639.jpg", "DSC00640.jpg", "DSC00642.jpg", "DSC00643.jpg", "DSC00644.jpg", "DSC00645.jpg", "DSC00646.jpg", "DSC00647.jpg", "DSC00648.jpg", "DSC00649.jpg", "DSC00652.jpg", "DSC00654.jpg", "DSC00656.jpg", "DSC00657.jpg", "DSC00661.jpg", "DSC00662.jpg", "DSC00663.jpg", "DSC00664.jpg", "DSC00666.jpg", "DSC00667.jpg", "DSC00668.jpg", "DSC00669.jpg", "DSC00670.jpg", "DSC00672.jpg", "DSC00673.jpg", "DSC00674.jpg", "DSC00675.jpg", "DSC00676.jpg", "DSC00677.jpg", "DSC00679.jpg", "DSC00680.jpg", "DSC00681.jpg", "DSC00684.jpg", "DSC00686.jpg", "DSC00687.jpg", "DSC00688.jpg", "DSC00689.jpg", "DSC00690.jpg", "DSC00691.jpg", "DSC00692.jpg", "DSC00693.jpg", "DSC00694.jpg", "DSC00695.jpg", "DSC00696.jpg", "DSC00697.jpg", "DSC00698.jpg", "DSC00699.jpg", "DSC00700.jpg", "DSC00703.jpg", "DSC00705.jpg", "DSC00707.jpg", "DSC00708.jpg", "DSC00709.jpg", "DSC00710.jpg", "DSC00712.jpg", "DSC00713.jpg", "DSC00714.jpg", "DSC00717.jpg", "DSC00718.jpg", "DSC00719.jpg", "DSC00720.jpg", "DSC00721.jpg", "DSC00722.jpg", "DSC00723.jpg", "DSC00724.jpg", "DSC00725.jpg", "DSC00726.jpg", "DSC00727.jpg", "DSC00728.jpg", "DSC00729.jpg", "DSC00730.jpg", "DSC00731.jpg", "DSC00732.jpg", "DSC00734.jpg", "DSC00735.jpg", "DSC00736.jpg", "DSC00737.jpg", "DSC00738.jpg", "DSC00739.jpg", "DSC00740.jpg", "DSC00741.jpg", "DSC00742.jpg", "DSC00743.jpg", "DSC00744.jpg", "DSC00745.jpg", "DSC00746.jpg", "DSC00747.jpg", "DSC00748.jpg", "DSC00749.jpg", "DSC00750.jpg", "DSC00755.jpg", "DSC00756.jpg", "DSC00757.jpg", "DSC00758.jpg", "DSC00759.jpg", "DSC00761.jpg", "DSC00762.jpg", "DSC00763.jpg", "DSC00764.jpg", "DSC00766.jpg", "DSC00767.jpg", "DSC00768.jpg", "DSC00769.jpg", "DSC00770.jpg", "DSC00771.jpg", "DSC00772.jpg", "DSC00774.jpg", "DSC00775.jpg", "DSC00776.jpg", "DSC00778.jpg", "DSC00781.jpg", "DSC00782.jpg", "DSC00783.jpg", "DSC00784.jpg", "DSC00786.jpg", "DSC00787.jpg", "DSC00789.jpg", "DSC00790.jpg", "DSC00791.jpg", "DSC00792.jpg", "DSC00793.jpg", "DSC00794.jpg", "DSC00795.jpg", "DSC00797.jpg", "DSC00799.jpg", "DSC00800.jpg", "DSC00801.jpg", "DSC00802.jpg", "DSC00804.jpg", "DSC00805.jpg", "DSC00806.jpg", "DSC00807.jpg", "DSC00808.jpg", "DSC00809.jpg", "DSC00810.jpg", "DSC00811.jpg", "DSC00812.jpg", "DSC00813.jpg", "DSC00815.jpg", "DSC00816.jpg", "DSC00817.jpg", "DSC00818.jpg", "DSC00819.jpg", "DSC00820.jpg", "DSC00821.jpg", "DSC00822.jpg", "DSC00823.jpg", "DSC00824.jpg", "DSC00827.jpg", "DSC00828.jpg", "DSC00829.jpg", "DSC00831.jpg", "DSC00832.jpg", "DSC00834.jpg", "DSC00835.jpg", "DSC00836.jpg", "DSC00837.jpg", "DSC00838.jpg", "DSC00839.jpg", "DSC00840.jpg", "DSC00842.jpg", "DSC00843.jpg", "DSC00844.jpg", "DSC00845.jpg", "DSC00846.jpg", "DSC00847.jpg", "DSC00848.jpg", "DSC00849.jpg", "DSC00850.jpg", "DSC00851.jpg", "DSC00852.jpg", "DSC00853.jpg", "DSC00854.jpg", "DSC00855.jpg", "DSC00858.jpg", "DSC00859.jpg", "DSC00860.jpg", "DSC00861.jpg", "DSC00862.jpg", "DSC00863.jpg", "DSC00864.jpg", "DSC00865.jpg", "DSC00866.jpg", "DSC00880.jpg", "DSC00881.jpg", "DSC00882.jpg", "DSC00883.jpg", "DSC00884.jpg", "DSC00885.jpg", "DSC00887.jpg", "DSC00888.jpg", "DSC00890.jpg", "DSC00891.jpg", "DSC00892.jpg", "DSC00893.jpg", "DSC00894.jpg", "DSC00895.jpg", "DSC00896.jpg", "DSC00897.jpg", "DSC00898.jpg", "DSC00901.jpg", "DSC00902.jpg", "DSC00903.jpg", "DSC00904.jpg", "DSC00905.jpg", "DSC00906.jpg", "DSC00907.jpg", "DSC00909.jpg", "DSC00910.jpg", "DSC00911.jpg", "DSC00912.jpg", "DSC00913.jpg", "DSC00914.jpg", "DSC00915.jpg", "DSC00916.jpg", "DSC00918.jpg", "DSC00919.jpg", "DSC00920.jpg", "DSC00921.jpg", "DSC00922.jpg", "DSC00923.jpg", "DSC00924.jpg", "DSC00925.jpg", "DSC00926.jpg", "DSC00927.jpg", "DSC00928.jpg", "DSC00929.jpg", "DSC00930.jpg", "DSC00931.jpg", "DSC00932.jpg", "DSC00933.jpg", "DSC00934.jpg", "DSC00935.jpg", "DSC00936.jpg", "DSC00937.jpg", "DSC00939.jpg", "DSC00942.jpg", "DSC00943.jpg", "DSC00944.jpg", "DSC00945.jpg", "DSC00946.jpg", "DSC00948.jpg", "DSC00949.jpg", "DSC00950.jpg", "DSC00951.jpg", "DSC00952.jpg", "DSC00953.jpg", "DSC00954.jpg", "DSC00955.jpg", "DSC00956.jpg", "DSC00957.jpg", "DSC00960.jpg", "DSC00961.jpg", "DSC00962.jpg", "DSC00963.jpg", "DSC00964.jpg", "DSC00965.jpg", "DSC00966.jpg", "DSC00967.jpg", "DSC00968.jpg", "DSC00971.jpg", "DSC00972.jpg", "DSC00973.jpg", "DSC00974.jpg", "DSC00975.jpg", "DSC00976.jpg", "DSC00977.jpg", "DSC00978.jpg", "DSC00979.jpg", "DSC00980.jpg", "DSC00984.jpg", "DSC00986.jpg", "DSC00987.jpg", "DSC00988.jpg", "DSC00989.jpg", "DSC00990.jpg"
+  ];
+
+  // transforma em objetos {name,url}
+  const allPhotos = photoListStatic.map(n => ({ name: n, url: 'img/' + n }));
+
+  // DOM
+  const gallery = document.getElementById('gallery');
+  const searchInput = document.getElementById('search');
+  const btnShowAll = document.getElementById('btnShowAll');
+  const btnShowSelected = document.getElementById('btnShowSelected');
+  const btnSelectAll = document.getElementById('selectAll');
+  const btnClear = document.getElementById('clearSelection');
+  const countEl = document.getElementById('count');
+  const fab = document.getElementById('fab');
+  const fabCount = document.getElementById('count-fab');
+
+  // estado
+  const selected = new Set();
+  let visibleFilter = null; // null = todos, 'selected' = apenas selecionados, or search string
+
+  // helpers
+  function escAttr(s){ return String(s||'').replace(/"/g,'&quot;'); }
+  function escHtml(s){ return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+  // cria card
+  function createCard(item) {
+    const card = document.createElement('div');
+    card.className = 'photo';
+    card.dataset.name = item.name;
+    card.innerHTML = `
+      <img loading="lazy" src="${escAttr(item.url)}" alt="${escAttr(item.name)}">
+      <div class="caption"><h3>${escHtml(item.name)}</h3><p>Para demonstração</p></div>
+    `;
+    ensureCheckSpan(card);
+    if (selected.has(item.name)) {
+      card.classList.add('selected');
+      card.querySelector('.js-checkmark').style.opacity = '1';
+    }
+    return card;
+  }
+
+  function ensureCheckSpan(card){
+    let s = card.querySelector('.js-checkmark');
+    if (!s){
+      s = document.createElement('span');
+      s.className = 'js-checkmark';
+      Object.assign(s.style, {
+        position:'absolute', top:'14px', right:'14px', width:'40px', height:'40px',
+        background:'var(--accent)', color:'#fff', borderRadius:'50%', fontSize:'26px',
+        lineHeight:'40px', textAlign:'center', opacity:'0', transition:'.2s', zIndex:'999', pointerEvents:'none'
+      });
+      s.textContent = '✓';
+      card.appendChild(s);
+    }
+    return s;
+  }
+
+  // renderiza tudo (aplica filtro de search/selecionados)
+  function renderAll() {
+    gallery.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    const q = (visibleFilter && typeof visibleFilter === 'string') ? visibleFilter.trim().toLowerCase() : null;
+    const showOnlySelected = visibleFilter === 'selected';
+    let nVisible = 0;
+
+    for (const item of allPhotos) {
+      // decidir visibilidade
+      let visible = true;
+      if (showOnlySelected) visible = selected.has(item.name);
+      else if (q) visible = item.name.toLowerCase().includes(q);
+
+      if (!visible) continue;
+
+      const card = createCard(item);
+      frag.appendChild(card);
+      nVisible++;
+    }
+
+    gallery.appendChild(frag);
+    updateCounts();
+    // scroll to top to show filter result
+    window.scrollTo({top:0,behavior:'smooth'});
+    return nVisible;
+  }
+
+  function updateCounts() {
+    countEl.textContent = selected.size;
+    fabCount.textContent = selected.size;
+  }
+
+  // delegação clique: seleção
+  gallery.addEventListener('click', (ev) => {
+    let el = ev.target;
+    while (el && !el.classList.contains('photo')) el = el.parentElement;
+    if (!el) return;
+    const name = el.dataset.name;
+    const isNow = el.classList.toggle('selected');
+    const s = ensureCheckSpan(el);
+    s.style.opacity = isNow ? '1' : '0';
+    if (isNow) selected.add(name);
+    else selected.delete(name);
+    updateCounts();
+  });
+
+  // filtros / controles
+  searchInput.addEventListener('input', () => {
+    const v = searchInput.value.trim();
+    visibleFilter = v ? v.toLowerCase() : null;
+    renderAll();
+  });
+  btnShowAll.addEventListener('click', () => { visibleFilter = null; searchInput.value = ''; renderAll(); });
+  btnShowSelected.addEventListener('click', () => { visibleFilter = 'selected'; searchInput.value = ''; renderAll(); });
+  btnSelectAll.addEventListener('click', () => {
+    // seleciona todas as visíveis
+    const cards = gallery.querySelectorAll('.photo');
+    cards.forEach(c => {
+      const name = c.dataset.name;
+      if (!selected.has(name)) {
+        selected.add(name);
+        c.classList.add('selected');
+        const s = ensureCheckSpan(c); s.style.opacity = '1';
+      }
+    });
+    updateCounts();
+  });
+  btnClear.addEventListener('click', () => {
+    selected.clear();
+    gallery.querySelectorAll('.photo.selected').forEach(c => {
+      c.classList.remove('selected');
+      const s = c.querySelector('.js-checkmark'); if (s) s.style.opacity = '0';
+    });
+    updateCounts();
+  });
+
+  // gerar PDF apenas com nomes (robusto)
+  fab.addEventListener('click', () => {
+    if (selected.size === 0) { alert('Selecione pelo menos uma foto primeiro!'); return; }
+    const jsPDFCtor = window.jspdf?.jsPDF || window.jsPDF || (window.jspdf && window.jspdf.jsPDF) || null;
+    if (!jsPDFCtor) { alert('Erro: jsPDF não disponível. Verifique o CDN.'); return; }
+    const pdf = new jsPDFCtor('p','mm','a4');
+    const margem = 15;
+    let y = 25;
+    pdf.setFontSize(20); pdf.setTextColor(67,56,202); pdf.text('Relatório de Seleção', margem, y); y+=10;
+    pdf.setFontSize(11); pdf.setTextColor(100,116,139); pdf.text(`Data: ${new Date().toLocaleString('pt-BR')}`, margem, y); y+=8;
+    pdf.setFontSize(12); pdf.setTextColor(30,41,59); pdf.text(`Fotos selecionadas: ${selected.size}`, margem, y); y+=10;
+    pdf.setDrawColor(220); pdf.setLineWidth(0.4); pdf.line(margem, y, 210-margem, y); y+=8;
+    pdf.setFontSize(11);
+    const lineHeight = 7;
+    let idx = 0;
+    for (const name of selected) {
+      idx++;
+      if (y + lineHeight > 287) { pdf.addPage(); y = 20; }
+      pdf.text(`${idx}. ${name}`, margem, y);
+      y += lineHeight;
+    }
+    const filename = `relatorio-nomes-${new Date().toISOString().slice(0,10)}.pdf`;
+    pdf.save(filename);
+  });
+
+  // inicializa: renderiza tudo
+  renderAll();
+  updateCounts();
+
+})();
+</script>
+
+</body>
+</html>
